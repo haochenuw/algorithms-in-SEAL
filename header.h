@@ -76,4 +76,4 @@ inline void print_parameters(std::shared_ptr<seal::SEALContext> context)
 }
 
 void example_polyeval();
-
+void example_mvproduct();

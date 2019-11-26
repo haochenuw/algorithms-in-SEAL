@@ -6,7 +6,7 @@ using namespace seal;
 
 
 int main(){
-	example_polyeval();
+	example_mvproduct();
 
 
 	return 0;
