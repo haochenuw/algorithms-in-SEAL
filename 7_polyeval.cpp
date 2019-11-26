@@ -5,12 +5,53 @@ using namespace std;
 using namespace seal;
 
 void example_polyeval_horner(int degree);
+void example_polyeval_tree(int degree);
+
+
+void compute_all_powers(Ciphertext ctx, int degree, Evaluator &evaluator, RelinKeys &relin_keys, vector<Ciphertext> powers){
+
+    powers.resize(degree+1); 
+    powers[1] = ctx; 
+
+    vector<int> levels(degree +1, 0);
+    levels[1] = 0;
+    levels[0] = 0;
+
+
+    for (int i = 2; i <= degree; i++){
+        // compute x^i 
+        int minlevel = i;
+        int cand = -1; 
+        for (int j = 1; j <= i/2; j++){
+            int k =  i - j; 
+            //
+            int newlevel = max(levels[j], levels[k]) + 1;
+            if( newlevel < minlevel){
+                cand = j;
+                minlevel = newlevel;
+            }
+        }
+        levels[i] = minlevel; 
+        // use cand 
+        if (cand < 0) throw runtime_error("error"); 
+        cout << "levels " << i << " = " << levels[i] << endl; 
+        // cand <= i - cand by definition 
+        Ciphertext temp = powers[cand]; 
+        evaluator.mod_switch_to_inplace(temp, powers[i-cand].parms_id()); 
+        
+        evaluator.multiply(temp, powers[i-cand], powers[i]);
+        evaluator.relinearize_inplace(powers[i], relin_keys);  
+        evaluator.rescale_to_next_inplace(powers[i]); 
+    }
+    return; 
+} 
+
 
 
 void example_polyeval() {
     cout << "Example: Polynomial Evaluation" << endl;
 
-    cout << "Enter degree: " << endl; 
+    cout << "Enter degree: "; 
     int degree = 0; 
     cin >> degree; 
 
@@ -41,7 +82,7 @@ void example_polyeval() {
             break;
 
         case 2:
-            //example_polyeval_tree();
+            example_polyeval_tree(degree);
             break;
 
         case 3:
@@ -56,6 +97,128 @@ void example_polyeval() {
         }
     }
 }
+
+
+void example_polyeval_tree(int degree){
+    EncryptionParameters parms(scheme_type::CKKS);
+
+    int depth = ceil(log2(degree));
+
+    vector<int> moduli(depth + 4, 40);
+    moduli[0] = 50; 
+    moduli[moduli.size() - 1] = 59;
+
+
+    size_t poly_modulus_degree = 16384;
+    parms.set_poly_modulus_degree(poly_modulus_degree);
+    parms.set_coeff_modulus(CoeffModulus::Create(
+        poly_modulus_degree, moduli));
+
+    double scale = pow(2.0, 40);
+
+    auto context = SEALContext::Create(parms);
+    print_parameters(context);
+    cout << endl;
+
+    cout << "Generating keys...";
+    KeyGenerator keygen(context);
+    auto public_key = keygen.public_key();
+    auto secret_key = keygen.secret_key();
+    auto relin_keys = keygen.relin_keys();
+    Encryptor encryptor(context, public_key);
+    Evaluator evaluator(context);
+    Decryptor decryptor(context, secret_key);
+
+    CKKSEncoder encoder(context);
+
+    cout << "...done " << endl;
+
+    // generate random for 
+
+
+
+    // generate random input.
+    double x = 1.1;
+    Plaintext ptx; 
+    encoder.encode(x, scale, ptx);
+    Ciphertext ctx;
+    encryptor.encrypt(ptx, ctx);
+    cout << "x = " << x << endl;
+
+
+
+    vector<double> coeffs(degree + 1); 
+
+    vector<Plaintext> plain_coeffs(degree+1);
+
+    cout << "Poly = ";
+    for (size_t i = 0; i < degree + 1; i++) {
+        coeffs[i] = (double)rand() / RAND_MAX;
+        encoder.encode(coeffs[i], scale, plain_coeffs[i]);
+        cout << coeffs[i] << ", "; 
+    }
+    cout << endl;
+
+
+    Ciphertext temp; 
+    
+    encryptor.encrypt(plain_coeffs[degree], temp);
+
+    cout << "encryption done " << endl;
+
+
+    Plaintext plain_result;
+    vector<double> result;
+    //decryptor.decrypt(ctx, plain_result);
+    //encoder.decode(plain_result, result);
+    //cout << "ctx  = " << result[0] << endl;
+
+
+    double expected_result = coeffs[degree];
+    
+
+
+    // compute all powers
+    vector<Ciphertext> powers(degree+1); 
+    compute_all_powers(ctx, degree, evaluator, relin_keys, powers); 
+    cout << "All powers computed " << endl; 
+
+    Ciphertext enc_result;
+    // result =a[0]
+    encryptor.encrypt(plain_coeffs[0], enc_result); 
+
+
+    // result += a[i]*x[i]
+    for (int i = 1; i <= degree; i++){   
+        evaluator.mod_switch_to_inplace(plain_coeffs[i], powers[i].parms_id()); 
+        evaluator.multiply_plain(powers[i], plain_coeffs[i], temp); 
+    
+        evaluator.rescale_to_next_inplace(temp); 
+        cout << "got here " << endl; 
+        evaluator.mod_switch_to_inplace(enc_result, temp.parms_id()); 
+        evaluator.add_inplace(enc_result, temp);
+        cout << i << "-th sum done" << endl; 
+    }
+
+
+
+    for (int i = degree - 1; i >= 0; i--) {      
+        expected_result *= x; 
+        expected_result += coeffs[i]; 
+    }
+    cout << "evaluation done" << endl;
+
+    decryptor.decrypt(enc_result, plain_result);
+    encoder.decode(plain_result, result);
+
+   
+    cout << "Actual : " << result[0] << ", Expected : " << expected_result << ", diff : " << abs(result[0] - expected_result) << endl;
+
+
+
+
+}
+
 
 void example_polyeval_horner(int degree) {
 
@@ -180,7 +343,10 @@ void example_polyeval_horner(int degree) {
     cout << "evaluation done" << endl;
 
 
-  
+    decryptor.decrypt(temp, plain_result);
+    encoder.decode(plain_result, result);
+    //cout << "ctx  = " << result[0] << endl;
+
    
     cout << "Actual : " << result[0] << ", Expected : " << expected_result << ", diff : " << abs(result[0] - expected_result) << endl;
 
