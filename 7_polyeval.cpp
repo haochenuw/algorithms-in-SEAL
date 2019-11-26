@@ -1,14 +1,19 @@
 
-#include "examples.h"
+#include "polyeval.h"
 
 using namespace std;
 using namespace seal;
 
-void example_polyeval_horner();
+void example_polyeval_horner(int degree);
 
 
 void example_polyeval() {
-    print_example_banner("Example: Polynomial Evaluation");
+    cout << "Example: Polynomial Evaluation" << endl;
+
+    cout << "Enter degree: " << endl; 
+    int degree = 0; 
+    cin >> degree; 
+
 
     while (true)
     {
@@ -32,7 +37,7 @@ void example_polyeval() {
         switch (selection)
         {
         case 1:
-            example_polyeval_horner();
+            example_polyeval_horner(degree);
             break;
 
         case 2:
@@ -52,9 +57,7 @@ void example_polyeval() {
     }
 }
 
-void example_polyeval_horner() {
-
-    int degree = 2; 
+void example_polyeval_horner(int degree) {
 
     EncryptionParameters parms(scheme_type::CKKS);
 
@@ -74,6 +77,7 @@ void example_polyeval_horner() {
     print_parameters(context);
     cout << endl;
 
+    cout << "Generating keys...";
     KeyGenerator keygen(context);
     auto public_key = keygen.public_key();
     auto secret_key = keygen.secret_key();
@@ -84,14 +88,14 @@ void example_polyeval_horner() {
 
     CKKSEncoder encoder(context);
 
-    cout << "key gen done " << endl;
+    cout << "...done " << endl;
 
     // generate random for 
 
 
 
     // generate random input.
-    double x = (double)rand() / RAND_MAX;
+    double x = 1.1;
     Plaintext ptx; 
     encoder.encode(x, scale, ptx);
     Ciphertext ctx;
@@ -104,6 +108,7 @@ void example_polyeval_horner() {
 
     vector<Plaintext> plain_coeffs(degree+1);
 
+    cout << "Poly = ";
     for (size_t i = 0; i < degree + 1; i++) {
         coeffs[i] = (double)rand() / RAND_MAX;
         encoder.encode(coeffs[i], scale, plain_coeffs[i]);
@@ -121,9 +126,9 @@ void example_polyeval_horner() {
 
     Plaintext plain_result;
     vector<double> result;
-    decryptor.decrypt(ctx, plain_result);
-    encoder.decode(plain_result, result);
-    cout << "ctx  = " << result[0] << endl;
+    //decryptor.decrypt(ctx, plain_result);
+    //encoder.decode(plain_result, result);
+    //cout << "ctx  = " << result[0] << endl;
 
 
     double expected_result = coeffs[degree];
@@ -137,22 +142,24 @@ void example_polyeval_horner() {
         evaluator.mod_switch_to_inplace(ctx, temp.parms_id());
         evaluator.multiply_inplace(temp, ctx);
 
+        /*
         decryptor.decrypt(temp, plain_result);
         encoder.decode(plain_result, result);
         cout << "temp2 = " << result[0] << endl;
+        */
 
         evaluator.relinearize_inplace(temp, relin_keys);
 
-        decryptor.decrypt(temp, plain_result);
-        encoder.decode(plain_result, result);
-        cout << "temp after relin = " << result[0] << endl;
+        //decryptor.decrypt(temp, plain_result);
+        //encoder.decode(plain_result, result);
+        //cout << "temp after relin = " << result[0] << endl;
 
 
         evaluator.rescale_to_next_inplace(temp); 
 
-        decryptor.decrypt(temp, plain_result);
-        encoder.decode(plain_result, result);
-        cout << "temp1  = " << result[0] << endl;
+        //decryptor.decrypt(temp, plain_result);
+        //encoder.decode(plain_result, result);
+        //cout << "temp1  = " << result[0] << endl;
 
         
         // temp += a[i]
@@ -163,11 +170,11 @@ void example_polyeval_horner() {
         temp.scale() = pow(2.0, 40); // manually reset the scale
         evaluator.add_plain_inplace(temp, plain_coeffs[i]);
 
-        cout << i << "-th iteration done" << endl;
+        //cout << i << "-th iteration done" << endl;
 
-        decryptor.decrypt(temp, plain_result);
-        encoder.decode(plain_result, result);
-        cout << "temp = " << result[0] << endl;
+        //decryptor.decrypt(temp, plain_result);
+        //encoder.decode(plain_result, result);
+        //cout << "temp = " << result[0] << endl;
 
     }
     cout << "evaluation done" << endl;
