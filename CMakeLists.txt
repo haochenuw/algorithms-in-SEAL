@@ -14,6 +14,13 @@ target_sources(polyeval
 	   7_polyeval.cpp
 )
 
+add_executable(mvproduct mvproduct_main.cpp)
+target_sources(mvproduct
+	PRIVATE
+	mvproduct.cpp
+)
+
+
 # Import Microsoft SEAL
 find_package(SEAL 3.4.0 EXACT REQUIRED
     # Providing a path so this can be built without installing Microsoft SEAL
@@ -22,3 +29,5 @@ find_package(SEAL 3.4.0 EXACT REQUIRED
 
 # Link Microsoft SEAL
 target_link_libraries(polyeval SEAL::seal)
+
+target_link_libraries(mvproduct SEAL::seal)
