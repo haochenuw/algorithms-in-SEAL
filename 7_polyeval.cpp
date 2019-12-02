@@ -40,7 +40,7 @@ void compute_all_powers(const Ciphertext &ctx, int degree, Evaluator &evaluator,
         levels[i] = minlevel; 
         // use cand 
         if (cand < 0) throw runtime_error("error"); 
-        cout << "levels " << i << " = " << levels[i] << endl; 
+        //cout << "levels " << i << " = " << levels[i] << endl; 
         // cand <= i - cand by definition 
         Ciphertext temp = powers[cand]; 
         evaluator.mod_switch_to_inplace(temp, powers[i-cand].parms_id()); 
@@ -60,6 +60,10 @@ void example_polyeval() {
     cout << "Enter degree: "; 
     int degree = 0; 
     cin >> degree; 
+
+    if (degree != 15){
+        throw invalid_argument("degree not supported by this sample code now. ");
+    }
 
 
     while (true)
@@ -209,16 +213,16 @@ void example_polyeval_tree(int degree){
     // result += a[i]*x[i]
     for (int i = 1; i <= degree; i++){  
 
-        cout << i << "-th sum started" << endl; 
+        //cout << i << "-th sum started" << endl; 
         evaluator.mod_switch_to_inplace(plain_coeffs[i], powers[i].parms_id()); 
         evaluator.multiply_plain(powers[i], plain_coeffs[i], temp); 
         evaluator.rescale_to_next_inplace(temp); 
-        cout << "got here " << endl; 
+        //cout << "got here " << endl; 
         evaluator.mod_switch_to_inplace(enc_result, temp.parms_id()); 
         enc_result.scale() = pow(2.0, 40); 
         temp.scale() = pow(2.0, 40); 
         evaluator.add_inplace(enc_result, temp);
-        cout << i << "-th sum done" << endl; 
+        // cout << i << "-th sum done" << endl; 
     }
    time_end = chrono::high_resolution_clock::now();
    time_diff = chrono::duration_cast<chrono::microseconds>(time_end - time_start);
@@ -485,7 +489,7 @@ void example_polyeval_bsgs(int degree){
     Ciphertext result_ctxt; 
 
     for (int j = 0; j < n2; j++){
-        cout << j << "-th iter started" << endl;
+        // cout << j << "-th iter started" << endl;
 
         Ciphertext temp; 
         // (vec, skip)
@@ -510,10 +514,10 @@ void example_polyeval_bsgs(int degree){
         else{
             result_ctxt = temp; 
         }
-        cout << j << "-th iter done" << endl;
+        //cout << j << "-th iter done" << endl;
     }
 
-    cout << "evaluation done" << endl;
+    //cout << "evaluation done" << endl;
     time_end = chrono::high_resolution_clock::now();
     time_diff = chrono::duration_cast<chrono::microseconds>(time_end - time_start);
     cout << "Done [" << time_diff.count() << " microseconds]" << endl;
@@ -534,7 +538,7 @@ void dot_product(vector<Plaintext> &pts, int skip, const vector<Ciphertext> &ctx
 
     Ciphertext temp; 
 
-    cout << "skip = " << skip << endl; 
+    //cout << "skip = " << skip << endl; 
 
     for (int i = 1; i < ctx.size();i++){
 
