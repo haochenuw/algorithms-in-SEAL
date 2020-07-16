@@ -62,7 +62,7 @@ void example_polyeval() {
     cin >> degree; 
 
     if (degree != 15){
-        throw invalid_argument("degree not supported by this sample code now. ");
+        throw invalid_argument("degree not supported by this sample code now. Only support degree 15");
     }
 
 
