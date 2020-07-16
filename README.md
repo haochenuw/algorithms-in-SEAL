@@ -3,7 +3,7 @@ Some example algorithms for homomorphic encryption computation based on Microsof
 
 ## Running the examples
 
-First, install SEAL 3.4.0 
+First, install SEAL 3.4.0 from https://github.com/Microsoft/SEAL. 
 
 Then
 ```
